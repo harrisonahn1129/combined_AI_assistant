@@ -52,11 +52,49 @@ public class Perplexity_api_handler {
     public CompletableFuture<String> makeAsyncApiCall(String prompt) {
         return CompletableFuture.supplyAsync(() -> {
             try {
-                return makeApiCall(prompt);
+                return makeApiCallWithRetry(prompt);
             } catch (Exception e) {
                 return "Error calling Perplexity API: " + e.getMessage();
             }
         }, executor);
+    }
+    
+    /**
+     * Makes a synchronous call to the Perplexity API with retry mechanism
+     * Will attempt up to 3 retries with exponential backoff
+     * @param prompt The user's input query
+     * @return The API response as a string
+     * @throws Exception if all retry attempts fail
+     */
+    public String makeApiCallWithRetry(String prompt) throws Exception {
+        int maxRetries = 3;
+        int retryCount = 0;
+        int retryDelayMs = 1000; // Initial delay of 1 second
+        
+        while (retryCount < maxRetries) {
+            try {
+                return makeApiCall(prompt);
+            } catch (Exception e) {
+                retryCount++;
+                if (retryCount >= maxRetries) {
+                    throw new Exception("Maximum retry attempts reached: " + e.getMessage());
+                }
+                
+                System.out.println("API call failed, retrying in " + retryDelayMs/1000 + " seconds... (" + retryCount + "/" + maxRetries + ")");
+                
+                try {
+                    Thread.sleep(retryDelayMs);
+                    // Exponential backoff: double the delay for next retry
+                    retryDelayMs *= 2;
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    throw new Exception("API call interrupted: " + e.getMessage());
+                }
+            }
+        }
+        
+        // This should never be reached due to the exception in the retry loop
+        return "Error: Failed to get response after multiple retries";
     }
     
     /**
@@ -77,11 +115,22 @@ public class Perplexity_api_handler {
         connection.setRequestProperty("Content-Type", "application/json");
         connection.setRequestProperty("Authorization", "Bearer " + apiKey);
         connection.setDoOutput(true);
+        connection.setConnectTimeout(10000); // 10 seconds connection timeout
+        connection.setReadTimeout(30000);    // 30 seconds read timeout
         
         // Prepare the request payload
-        // NOTE: In a real implementation, you would need to format this according to the Perplexity API specs
+        // Using the format from official Perplexity documentation with improved system prompt
+        String systemPrompt = "Be precise and concise. Do not use LaTeX, markdown formatting, or symbols like [1][2] for references. " +
+                            "Use plain, conversational language as if speaking directly to a person. " +
+                            "Format information clearly with regular bullet points for lists. " +
+                            "Use everyday language and avoid academic or technical jargon when possible. " +
+                            "Return only the actual answer content, without any metadata, json, or citations. " +
+                            "Do not use any markdown formatting, especially no asterisks (**) for bold text. " +
+                            "Do not include any special Unicode characters like \\u2022.";
+        
         String jsonInputString = String.format(
-            "{\"model\": \"sonar-medium-online\", \"messages\": [{\"role\": \"user\", \"content\": \"%s\"}], \"options\": {\"temperature\": 0.7}}",
+            "{\"model\": \"sonar\", \"messages\": [{\"role\": \"system\", \"content\": \"%s\"}, {\"role\": \"user\", \"content\": \"%s\"}]}",
+            systemPrompt.replace("\"", "\\\""),
             prompt.replace("\"", "\\\"") // Escape quotes in the prompt
         );
         
@@ -112,32 +161,95 @@ public class Perplexity_api_handler {
             }
         }
         
-        // In a real implementation, you would parse the JSON response to extract the message content
-        // For example: return parseJsonResponse(response.toString());
-        
-        // For demonstration, return a simplified version
-        return "Perplexity response to: " + prompt + "\n\n" + simulateResponse(prompt);
+        // Parse the JSON response to extract the message content
+        return parseJsonResponse(response.toString());
     }
     
     /**
-     * Simulates a Perplexity response for demonstration purposes
-     * In a real implementation, this would be replaced with actual API response parsing
-     * @param prompt The input prompt
-     * @return A simulated response
+     * Parses the JSON response from the Perplexity API
+     * @param jsonResponse The raw JSON response from the API
+     * @return The extracted message content
      */
-    private String simulateResponse(String prompt) {
-        // This is just a placeholder for demonstration
-        String[] responses = {
-            "I've searched the web and found the following information...",
-            "According to the latest information available online...",
-            "Multiple sources suggest that...",
-            "Based on my real-time search capabilities, I can tell you that...",
-            "The most up-to-date information indicates that..."
-        };
+    private String parseJsonResponse(String jsonResponse) {
+        try {
+            // Debug: Print raw response to console
+            // System.out.println("Raw response: " + jsonResponse);
+            
+            // Extract content from choices[0].message.content
+            int choicesIndex = jsonResponse.indexOf("\"choices\"");
+            if (choicesIndex >= 0) {
+                int messageIndex = jsonResponse.indexOf("\"message\"", choicesIndex);
+                if (messageIndex >= 0) {
+                    int contentIndex = jsonResponse.indexOf("\"content\"", messageIndex);
+                    if (contentIndex >= 0) {
+                        int startQuote = jsonResponse.indexOf("\"", contentIndex + "\"content\"".length());
+                        if (startQuote >= 0) {
+                            startQuote++; // Move past the opening quote
+                            int endQuote = -1;
+                            // Find the closing quote (avoiding escaped quotes)
+                            boolean foundEndQuote = false;
+                            for (int i = startQuote; i < jsonResponse.length(); i++) {
+                                // Check for escape character
+                                if (jsonResponse.charAt(i) == '\\') {
+                                    // Skip the next character
+                                    i++;
+                                    continue;
+                                }
+                                // Found an unescaped quote
+                                if (jsonResponse.charAt(i) == '"') {
+                                    endQuote = i;
+                                    foundEndQuote = true;
+                                    break;
+                                }
+                            }
+                            
+                            if (foundEndQuote) {
+                                // Process JSON escapes and clean formatting
+                                String content = jsonResponse.substring(startQuote, endQuote);
+                                content = cleanResponse(content);
+                                return content;
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // Return error message if parsing fails
+            return "Perplexity response parsing failed. Please try again.";
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "JSON parsing error: " + e.getMessage();
+        }
+    }
+    
+    /**
+     * Cleans the response text to remove markdown and special characters
+     * @param text Raw response text
+     * @return Cleaned response text
+     */
+    private String cleanResponse(String text) {
+        // Handle escaped characters
+        String result = text.replace("\\\"", "\"")
+                           .replace("\\n", "\n")
+                           .replace("\\r", "\r")
+                           .replace("\\t", "\t")
+                           .replace("\\\\", "\\")
+                           .replace("\\/", "/");
         
-        // Simple simulation based on prompt length
-        int index = Math.abs(prompt.hashCode() % responses.length);
-        return responses[index] + " [Simulated Perplexity response with web-search capability]";
+        // Remove markdown formatting
+        result = result.replaceAll("\\*\\*(.*?)\\*\\*", "$1"); // Bold (**text**)
+        result = result.replaceAll("\\*(.*?)\\*", "$1");       // Italic (*text*)
+        result = result.replaceAll("__(.*?)__", "$1");         // Underline (__text__)
+        result = result.replaceAll("~~(.*?)~~", "$1");         // Strikethrough (~~text~~)
+        
+        // Replace Unicode bullet points with regular bullet points
+        result = result.replaceAll("\\\\u2022", "•");          // \u2022 -> •
+        result = result.replaceAll("/u2022", "•");             // /u2022 -> •
+        
+        // Fix any other problematic characters 
+        result = result.replaceAll("\\\\u([0-9a-fA-F]{4})", ""); // Remove other Unicode escapes
+        
+        return result;
     }
     
     /**

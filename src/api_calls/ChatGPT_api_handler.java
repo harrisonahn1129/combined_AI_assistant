@@ -52,11 +52,49 @@ public class ChatGPT_api_handler {
     public CompletableFuture<String> makeAsyncApiCall(String prompt) {
         return CompletableFuture.supplyAsync(() -> {
             try {
-                return makeApiCall(prompt);
+                return makeApiCallWithRetry(prompt);
             } catch (Exception e) {
                 return "Error calling ChatGPT API: " + e.getMessage();
             }
         }, executor);
+    }
+    
+    /**
+     * Makes a synchronous call to the ChatGPT API with retry mechanism
+     * Will attempt up to 3 retries with exponential backoff
+     * @param prompt The user's input query
+     * @return The API response as a string
+     * @throws Exception if all retry attempts fail
+     */
+    public String makeApiCallWithRetry(String prompt) throws Exception {
+        int maxRetries = 3;
+        int retryCount = 0;
+        int retryDelayMs = 1000; // Initial delay of 1 second
+        
+        while (retryCount < maxRetries) {
+            try {
+                return makeApiCall(prompt);
+            } catch (Exception e) {
+                retryCount++;
+                if (retryCount >= maxRetries) {
+                    throw new Exception("Maximum retry attempts reached: " + e.getMessage());
+                }
+                
+                System.out.println("API call failed, retrying in " + retryDelayMs/1000 + " seconds... (" + retryCount + "/" + maxRetries + ")");
+                
+                try {
+                    Thread.sleep(retryDelayMs);
+                    // Exponential backoff: double the delay for next retry
+                    retryDelayMs *= 2;
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    throw new Exception("API call interrupted: " + e.getMessage());
+                }
+            }
+        }
+        
+        // This should never be reached due to the exception in the retry loop
+        return "Error: Failed to get response after multiple retries";
     }
     
     /**
@@ -77,11 +115,21 @@ public class ChatGPT_api_handler {
         connection.setRequestProperty("Content-Type", "application/json");
         connection.setRequestProperty("Authorization", "Bearer " + apiKey);
         connection.setDoOutput(true);
+        connection.setConnectTimeout(10000); // 10 seconds connection timeout
+        connection.setReadTimeout(30000);    // 30 seconds read timeout
         
-        // Prepare the request payload
-        // NOTE: In a real implementation, you would need to format this according to the OpenAI API specs
+        // Add system message to improve response formatting
+        String systemPrompt = "Be precise and concise. Do not use LaTeX, markdown formatting, or symbols like [1][2] for references. " +
+                            "Use plain, conversational language as if speaking directly to a person. " +
+                            "Format information clearly with regular bullet points for lists. " +
+                            "Use everyday language and avoid academic or technical jargon when possible. " +
+                            "Return only the actual answer content, without any metadata, json, or citations. " +
+                            "Do not use any markdown formatting, especially no asterisks (**) for bold text. " +
+                            "Do not include any special Unicode characters like \\u2022.";
+                            
         String jsonInputString = String.format(
-            "{\"model\": \"gpt-4\", \"messages\": [{\"role\": \"user\", \"content\": \"%s\"}], \"temperature\": 0.7}",
+            "{\"model\": \"gpt-4.1-nano\", \"messages\": [{\"role\": \"system\", \"content\": \"%s\"}, {\"role\": \"user\", \"content\": \"%s\"}]}",
+            systemPrompt.replace("\"", "\\\""),
             prompt.replace("\"", "\\\"") // Escape quotes in the prompt
         );
         
@@ -112,32 +160,116 @@ public class ChatGPT_api_handler {
             }
         }
         
-        // In a real implementation, you would parse the JSON response to extract the message content
-        // For example: return parseJsonResponse(response.toString());
-        
-        // For demonstration, return a simplified version
-        return "ChatGPT response to: " + prompt + "\n\n" + simulateResponse(prompt);
+        // Parse the JSON response to extract the message content
+        return parseJsonResponse(response.toString());
     }
     
     /**
-     * Simulates a ChatGPT response for demonstration purposes
-     * In a real implementation, this would be replaced with actual API response parsing
-     * @param prompt The input prompt
-     * @return A simulated response
+     * Parses the JSON response from the ChatGPT API
+     * @param jsonResponse The raw JSON response from the API
+     * @return The extracted message content
      */
-    private String simulateResponse(String prompt) {
-        // This is just a placeholder for demonstration
-        String[] responses = {
-            "Based on my analysis, I would recommend considering the following approach...",
-            "That's an interesting question. Here's what I know about this topic...",
-            "From my training data, I can tell you that...",
-            "I'd be happy to help you with that. Let me provide some information...",
-            "According to my knowledge, there are several ways to address this..."
-        };
+    private String parseJsonResponse(String jsonResponse) {
+        try {
+            // Extract content from choices[0].message.content
+            int choicesIndex = jsonResponse.indexOf("\"choices\"");
+            if (choicesIndex >= 0) {
+                int messageIndex = jsonResponse.indexOf("\"message\"", choicesIndex);
+                if (messageIndex >= 0) {
+                    int contentIndex = jsonResponse.indexOf("\"content\"", messageIndex);
+                    if (contentIndex >= 0) {
+                        int startQuote = jsonResponse.indexOf("\"", contentIndex + "\"content\"".length());
+                        if (startQuote >= 0) {
+                            startQuote++; // Move past the opening quote
+                            int endQuote = -1;
+                            // Find the closing quote (avoiding escaped quotes)
+                            boolean foundEndQuote = false;
+                            for (int i = startQuote; i < jsonResponse.length(); i++) {
+                                // Check for escape character
+                                if (jsonResponse.charAt(i) == '\\') {
+                                    // Skip the next character
+                                    i++;
+                                    continue;
+                                }
+                                // Found an unescaped quote
+                                if (jsonResponse.charAt(i) == '"') {
+                                    endQuote = i;
+                                    foundEndQuote = true;
+                                    break;
+                                }
+                            }
+                            
+                            if (foundEndQuote) {
+                                // Process JSON escapes and clean formatting
+                                String content = jsonResponse.substring(startQuote, endQuote);
+                                content = cleanResponse(content);
+                                return content;
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // Return error message if parsing fails
+            return "ChatGPT response parsing failed. Please try again.";
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "JSON parsing error: " + e.getMessage();
+        }
+    }
+    
+    /**
+     * Cleans the response text to remove LaTeX, markdown, and special formatting
+     * @param text The text to clean
+     * @return The cleaned text
+     */
+    private String cleanResponse(String text) {
+        if (text == null) {
+            return "";
+        }
         
-        // Simple simulation based on prompt length
-        int index = Math.abs(prompt.hashCode() % responses.length);
-        return responses[index] + " [Simulated ChatGPT response]";
+        // Handle escaped characters
+        String result = text.replace("\\\"", "\"")
+                           .replace("\\n", "\n")
+                           .replace("\\r", "\r")
+                           .replace("\\t", "\t")
+                           .replace("\\\\", "\\")
+                           .replace("\\/", "/");
+        
+        // Replace LaTeX equations (both inline and block)
+        result = result.replaceAll("\\$\\$(.*?)\\$\\$", "");
+        result = result.replaceAll("\\$(.*?)\\$", "");
+        
+        // Remove markdown headers
+        result = result.replaceAll("#+\\s+", "");
+        
+        // Remove markdown bold/italic
+        result = result.replaceAll("\\*\\*(.*?)\\*\\*", "$1"); // Bold (**text**)
+        result = result.replaceAll("__(.*?)__", "$1");         // Underline (__text__)
+        result = result.replaceAll("\\*(.*?)\\*", "$1");       // Italic (*text*)
+        result = result.replaceAll("_(.*?)_", "$1");           // Underline (_text_)
+        
+        // Remove markdown code blocks
+        result = result.replaceAll("```[\\s\\S]*?```", "");
+        result = result.replaceAll("`(.*?)`", "$1");
+        
+        // Remove bullet points (both * and • Unicode character)
+        result = result.replaceAll("^\\s*[\\*•]\\s+", "");
+        
+        // Remove numbered lists
+        result = result.replaceAll("^\\s*\\d+\\.\\s+", "");
+        
+        // Replace Unicode bullet points with regular bullet points
+        result = result.replaceAll("\\\\u2022", "•");          // \u2022 -> •
+        result = result.replaceAll("/u2022", "•");             // /u2022 -> •
+        
+        // Fix any other problematic characters 
+        result = result.replaceAll("\\\\u([0-9a-fA-F]{4})", ""); // Remove other Unicode escapes
+        
+        // Fix multiple consecutive newlines
+        result = result.replaceAll("\\n{3,}", "\n\n");
+        
+        return result.trim();
     }
     
     /**

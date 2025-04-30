@@ -1,6 +1,7 @@
 package app_runner;
 
 import javax.swing.*;
+import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.*;
 import panels.*;
 import api_calls.*;
@@ -87,10 +88,8 @@ public class App_runner {
         // Settings menu
         JMenu settingsMenu = new JMenu("Settings");
         JMenuItem apiSettingsItem = new JMenuItem("API Settings");
-        JMenuItem themeItem = new JMenuItem("Theme");
         
         settingsMenu.add(apiSettingsItem);
-        settingsMenu.add(themeItem);
         
         // Add action listeners
         exitItem.addActionListener(e -> shutdownApplication());
@@ -100,6 +99,34 @@ public class App_runner {
         });
         
         apiSettingsItem.addActionListener(e -> showApiSettingsDialog());
+        
+        // Add export action listener
+        exportItem.addActionListener(e -> {
+            JFileChooser fileChooser = new JFileChooser();
+            fileChooser.setDialogTitle("Export Conversation");
+            fileChooser.setFileFilter(new FileNameExtensionFilter("JSON Files", "json"));
+            
+            int userSelection = fileChooser.showSaveDialog(mainFrame);
+            if (userSelection == JFileChooser.APPROVE_OPTION) {
+                String filePath = fileChooser.getSelectedFile().getAbsolutePath();
+                if (!filePath.toLowerCase().endsWith(".json")) {
+                    filePath += ".json";
+                }
+                
+                boolean success = dbHandler.exportConversations(filePath);
+                if (success) {
+                    JOptionPane.showMessageDialog(mainFrame, 
+                        "Conversations exported successfully.", 
+                        "Export Complete", 
+                        JOptionPane.INFORMATION_MESSAGE);
+                } else {
+                    JOptionPane.showMessageDialog(mainFrame, 
+                        "Failed to export conversations.", 
+                        "Export Error", 
+                        JOptionPane.ERROR_MESSAGE);
+                }
+            }
+        });
         
         // Add menus to menu bar
         menuBar.add(fileMenu);
@@ -153,7 +180,8 @@ public class App_runner {
                         if (pane.getLeftComponent() instanceof JScrollPane && 
                             ((JScrollPane)pane.getLeftComponent()).getViewport().getView() instanceof ChatGPT_panel) {
                             ChatGPT_panel panel = (ChatGPT_panel)((JScrollPane)pane.getLeftComponent()).getViewport().getView();
-                            // In a real implementation, you would extract the handler and update it
+                            // Update the API handler
+                            panel.getApiHandler().setApiKey(chatGPTKey);
                         }
                     }
                 }
@@ -178,6 +206,24 @@ public class App_runner {
      * Cleans up resources and shuts down the application
      */
     private void shutdownApplication() {
+        System.out.println("Shutting down application...");
+        
+        // Shut down API handlers first
+        try {
+            // Get references to the API handlers and shut them down
+            if (chatGPTPanel != null) {
+                // This assumes you have a method to get the API handler from the panel
+                // If not, consider adding such a method or restructuring
+                chatGPTPanel.getApiHandler().shutdown();
+            }
+            
+            if (perplexityPanel != null) {
+                perplexityPanel.getApiHandler().shutdown();
+            }
+        } catch (Exception e) {
+            System.err.println("Error shutting down API handlers: " + e.getMessage());
+        }
+        
         // Shut down background tasks
         if (backgroundPanel != null) {
             backgroundPanel.shutdown();
@@ -188,8 +234,18 @@ public class App_runner {
             dbHandler.close();
         }
         
-        // Exit the application
-        System.exit(0);
+        // Force exit after a short delay to ensure all resources are released
+        new Thread(() -> {
+            try {
+                Thread.sleep(500); // Wait for 0.5 seconds
+                System.out.println("Forcing exit...");
+                System.exit(0);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                // Terminate immediately
+                System.exit(1);
+            }
+        }).start();
     }
     
     /**
