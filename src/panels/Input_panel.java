@@ -9,7 +9,7 @@ import java.util.concurrent.CompletableFuture;
 
 import api_calls.ChatGPT_api_handler;
 import api_calls.Perplexity_api_handler;
-import database.Database_handler;
+//import database.Database_handler;
 
 /**
  * Panel for handling user input and query submission
@@ -21,7 +21,7 @@ public class Input_panel extends JPanel {
     private JProgressBar progressBar;
     private ChatGPT_api_handler chatGPTHandler;
     private Perplexity_api_handler perplexityHandler;
-    private Database_handler dbHandler;
+//    private Database_handler dbHandler;
     private ChatGPT_panel chatGPTPanel;
     private Perplexity_panel perplexityPanel;
     
@@ -31,14 +31,21 @@ public class Input_panel extends JPanel {
      * @param perplexityHandler the Perplexity API handler
      * @param dbHandler the database handler
      */
+//    public Input_panel(ChatGPT_api_handler chatGPTHandler, 
+//                      Perplexity_api_handler perplexityHandler,
+//                      Database_handler dbHandler) {
+//        this.chatGPTHandler = chatGPTHandler;
+//        this.perplexityHandler = perplexityHandler;
+//        this.dbHandler = dbHandler;
+//        initializeUI();
+//    }
     public Input_panel(ChatGPT_api_handler chatGPTHandler, 
-                      Perplexity_api_handler perplexityHandler,
-                      Database_handler dbHandler) {
-        this.chatGPTHandler = chatGPTHandler;
-        this.perplexityHandler = perplexityHandler;
-        this.dbHandler = dbHandler;
-        initializeUI();
-    }
+            Perplexity_api_handler perplexityHandler) {
+			this.chatGPTHandler = chatGPTHandler;
+			this.perplexityHandler = perplexityHandler;
+//			this.dbHandler = dbHandler;
+			initializeUI();
+		}
     
     /**
      * Sets the reference to the ChatGPT and Perplexity panels for updating UI
@@ -119,7 +126,7 @@ public class Input_panel extends JPanel {
         // Check if API keys are set
         if (!chatGPTHandler.hasValidApiKey() || !perplexityHandler.hasValidApiKey()) {
             JOptionPane.showMessageDialog(this, 
-                "API keys are not configured. Please set them in the Settings menu.", 
+                "API keys are not configured. Please set them in the code.", 
                 "Missing API Keys", 
                 JOptionPane.WARNING_MESSAGE);
             return;
@@ -160,7 +167,7 @@ public class Input_panel extends JPanel {
                 }
                 
                 // Save to database
-                dbHandler.saveConversation(conversationId, query, chatGPTResponse, perplexityResponse);
+//                dbHandler.saveConversation(conversationId, query, chatGPTResponse, perplexityResponse);
                 
                 // Reset UI loading state
                 setLoading(false);

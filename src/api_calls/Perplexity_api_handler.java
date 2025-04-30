@@ -81,7 +81,11 @@ public class Perplexity_api_handler {
         // Prepare the request payload
         // NOTE: In a real implementation, you would need to format this according to the Perplexity API specs
         String jsonInputString = String.format(
-            "{\"model\": \"sonar-medium-online\", \"messages\": [{\"role\": \"user\", \"content\": \"%s\"}], \"options\": {\"temperature\": 0.7}}",
+            "{\"model\": \"sonar\","
+//            + " \"messages\": ["
+            + " \"messages\": [{\"role\": \"system\", \"content\": \"Give me a response in a simple and concise string format with no Regex.\"},"
+            + "{\"role\": \"user\", \"content\": \"%s\"}],"
+            + " \"options\": {\"temperature\": 0.7}}",
             prompt.replace("\"", "\\\"") // Escape quotes in the prompt
         );
         
@@ -116,7 +120,7 @@ public class Perplexity_api_handler {
         // For example: return parseJsonResponse(response.toString());
         
         // For demonstration, return a simplified version
-        return "Perplexity response to: " + prompt + "\n\n" + simulateResponse(prompt);
+        return "\n\n" + parseJsonResponse(response.toString());
     }
     
     /**
@@ -125,19 +129,20 @@ public class Perplexity_api_handler {
      * @param prompt The input prompt
      * @return A simulated response
      */
-    private String simulateResponse(String prompt) {
+    private String parseJsonResponse(String response) {
         // This is just a placeholder for demonstration
-        String[] responses = {
-            "I've searched the web and found the following information...",
-            "According to the latest information available online...",
-            "Multiple sources suggest that...",
-            "Based on my real-time search capabilities, I can tell you that...",
-            "The most up-to-date information indicates that..."
-        };
+    	String[] split_for_message = response.split("\"message\": ");
+    	String[] split_for_content = split_for_message[1].split(", \"content\": \"");
+    	String[] split_for_end = split_for_content[1].split("\"},");
+        String pre_processed_response = split_for_end[0];
+        String processed_response = pre_processed_response
+        		.replace("\\n\\n", System.lineSeparator() + System.lineSeparator())
+        		.replace("\\n", System.lineSeparator())
+        		.replace("\\\"", "")
+        		.replace("\\u* ", " ");
         
-        // Simple simulation based on prompt length
-        int index = Math.abs(prompt.hashCode() % responses.length);
-        return responses[index] + " [Simulated Perplexity response with web-search capability]";
+        
+        return processed_response;
     }
     
     /**

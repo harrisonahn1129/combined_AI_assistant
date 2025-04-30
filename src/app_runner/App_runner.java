@@ -16,14 +16,14 @@ public class App_runner {
     private Perplexity_panel perplexityPanel;
     private Input_panel inputPanel;
     private Background_panel backgroundPanel;
-    private Database_handler dbHandler;
+//    private Database_handler dbHandler;
     
     /**
      * Constructor that initializes all UI components and database connection
      */
     public App_runner() {
         // Initialize the database handler for conversation storage
-        dbHandler = new Database_handler();
+//        dbHandler = new Database_handler();
         
         // Initialize the background task handler
         backgroundPanel = new Background_panel();
@@ -41,7 +41,8 @@ public class App_runner {
         // Initialize UI panels
         chatGPTPanel = new ChatGPT_panel(chatGPTHandler);
         perplexityPanel = new Perplexity_panel(perplexityHandler);
-        inputPanel = new Input_panel(chatGPTHandler, perplexityHandler, dbHandler);
+//        inputPanel = new Input_panel(chatGPTHandler, perplexityHandler, dbHandler);
+        inputPanel = new Input_panel(chatGPTHandler, perplexityHandler);
         
         // Connect the panels
         inputPanel.setPanels(chatGPTPanel, perplexityPanel);
@@ -58,56 +59,12 @@ public class App_runner {
         mainFrame.add(splitPane, BorderLayout.CENTER);
         mainFrame.add(inputPanel, BorderLayout.SOUTH);
         
-        // Setup menu
-        setupMenu();
-        
         // Add shutdown hook to clean up resources
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             shutdownApplication();
         }));
     }
     
-    /**
-     * Creates and attaches the application menu
-     */
-    private void setupMenu() {
-        JMenuBar menuBar = new JMenuBar();
-        
-        // File menu
-        JMenu fileMenu = new JMenu("File");
-        JMenuItem exportItem = new JMenuItem("Export Conversation");
-        JMenuItem clearItem = new JMenuItem("Clear All");
-        JMenuItem exitItem = new JMenuItem("Exit");
-        
-        fileMenu.add(exportItem);
-        fileMenu.add(clearItem);
-        fileMenu.addSeparator();
-        fileMenu.add(exitItem);
-        
-        // Settings menu
-        JMenu settingsMenu = new JMenu("Settings");
-        JMenuItem apiSettingsItem = new JMenuItem("API Settings");
-        JMenuItem themeItem = new JMenuItem("Theme");
-        
-        settingsMenu.add(apiSettingsItem);
-        settingsMenu.add(themeItem);
-        
-        // Add action listeners
-        exitItem.addActionListener(e -> shutdownApplication());
-        clearItem.addActionListener(e -> {
-            chatGPTPanel.clearConversation();
-            perplexityPanel.clearConversation();
-        });
-        
-        apiSettingsItem.addActionListener(e -> showApiSettingsDialog());
-        
-        // Add menus to menu bar
-        menuBar.add(fileMenu);
-        menuBar.add(settingsMenu);
-        
-        // Set the menu bar
-        mainFrame.setJMenuBar(menuBar);
-    }
     
     /**
      * Shows the API settings dialog
@@ -145,7 +102,7 @@ public class App_runner {
             
             // Save the API keys securely
             if (!chatGPTKey.isEmpty()) {
-                dbHandler.saveApiKey("chatgpt", chatGPTKey);
+//                dbHandler.saveApiKey("chatgpt", chatGPTKey);
                 // Find the API handler instances and update them
                 for (Component comp : mainFrame.getContentPane().getComponents()) {
                     if (comp instanceof JSplitPane) {
@@ -159,10 +116,10 @@ public class App_runner {
                 }
             }
             
-            if (!perplexityKey.isEmpty()) {
-                dbHandler.saveApiKey("perplexity", perplexityKey);
-                // Similar code to update the Perplexity handler
-            }
+//            if (!perplexityKey.isEmpty()) {
+////                dbHandler.saveApiKey("perplexity", perplexityKey);
+//                // Similar code to update the Perplexity handler
+//            }
             
             settingsDialog.dispose();
         });
@@ -178,18 +135,46 @@ public class App_runner {
      * Cleans up resources and shuts down the application
      */
     private void shutdownApplication() {
+        System.out.println("Shutting down application...");
+        
+        // Shut down API handlers first
+        try {
+            // Get references to the API handlers and shut them down
+            if (chatGPTPanel != null) {
+                // This assumes you have a method to get the API handler from the panel
+                // If not, consider adding such a method or restructuring
+                chatGPTPanel.getApiHandler().shutdown();
+            }
+            
+            if (perplexityPanel != null) {
+                perplexityPanel.getApiHandler().shutdown();
+            }
+        } catch (Exception e) {
+            System.err.println("Error shutting down API handlers: " + e.getMessage());
+        }
+        
         // Shut down background tasks
         if (backgroundPanel != null) {
             backgroundPanel.shutdown();
         }
         
-        // Close database connection
-        if (dbHandler != null) {
-            dbHandler.close();
-        }
+//        // Close database connection
+//        if (dbHandler != null) {
+//            dbHandler.close();
+//        }
         
-        // Exit the application
-        System.exit(0);
+        // Force exit after a short delay to ensure all resources are released
+        new Thread(() -> {
+            try {
+                Thread.sleep(500); // 0.5초 대기
+                System.out.println("Forcing exit...");
+                System.exit(0);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                // 즉시 종료
+                System.exit(1);
+            }
+        }).start();
     }
     
     /**

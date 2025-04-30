@@ -40,9 +40,6 @@ public class ChatGPT_panel extends JPanel {
         responseArea.setWrapStyleWord(true);
         responseArea.setFont(new Font("SansSerif", Font.PLAIN, 14));
         
-        // Add welcome message
-        responseArea.setText("ChatGPT responses will appear here.\n");
-        
         // Create scroll pane for the response area
         scrollPane = new JScrollPane(responseArea);
         scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
@@ -72,7 +69,7 @@ public class ChatGPT_panel extends JPanel {
         // Format and append the query and response
         String formattedText = "\n-------------------\n";
         formattedText += "Query: " + query + "\n\n";
-        formattedText += "ChatGPT: " + response + "\n";
+        formattedText += response + "\n\n";
         
         // Append to the text area
         responseArea.append(formattedText);
@@ -88,7 +85,7 @@ public class ChatGPT_panel extends JPanel {
      * Clears all conversation history from the panel
      */
     public void clearConversation() {
-        responseArea.setText("ChatGPT responses will appear here.\n");
+        responseArea.setText("");
     }
     
     /**
@@ -104,5 +101,9 @@ public class ChatGPT_panel extends JPanel {
                 vertical.setValue(vertical.getMaximum());
             });
         }
+    }
+    
+    public ChatGPT_api_handler getApiHandler() {
+        return this.apiHandler;
     }
 }

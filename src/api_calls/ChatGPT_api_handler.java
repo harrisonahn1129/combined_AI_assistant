@@ -81,7 +81,10 @@ public class ChatGPT_api_handler {
         // Prepare the request payload
         // NOTE: In a real implementation, you would need to format this according to the OpenAI API specs
         String jsonInputString = String.format(
-            "{\"model\": \"gpt-4\", \"messages\": [{\"role\": \"user\", \"content\": \"%s\"}], \"temperature\": 0.7}",
+        		"{\"model\": \"gpt-4.1-nano\","
+//              + " \"messages\": ["
+              + " \"messages\": [{\"role\": \"system\", \"content\": \"Give me a response in a simple and concise string format with no Regex.\"},"
+              + "{\"role\": \"user\", \"content\": \"%s\"}]}",
             prompt.replace("\"", "\\\"") // Escape quotes in the prompt
         );
         
@@ -116,7 +119,7 @@ public class ChatGPT_api_handler {
         // For example: return parseJsonResponse(response.toString());
         
         // For demonstration, return a simplified version
-        return "ChatGPT response to: " + prompt + "\n\n" + simulateResponse(prompt);
+        return simulateResponse(response.toString());
     }
     
     /**
@@ -125,19 +128,15 @@ public class ChatGPT_api_handler {
      * @param prompt The input prompt
      * @return A simulated response
      */
-    private String simulateResponse(String prompt) {
+    private String simulateResponse(String response) {
         // This is just a placeholder for demonstration
-        String[] responses = {
-            "Based on my analysis, I would recommend considering the following approach...",
-            "That's an interesting question. Here's what I know about this topic...",
-            "From my training data, I can tell you that...",
-            "I'd be happy to help you with that. Let me provide some information...",
-            "According to my knowledge, there are several ways to address this..."
-        };
-        
-        // Simple simulation based on prompt length
-        int index = Math.abs(prompt.hashCode() % responses.length);
-        return responses[index] + " [Simulated ChatGPT response]";
+    	System.out.println(response);
+    	String[] split_for_message = response.split("\"message\": ");
+    	String[] split_for_content = split_for_message[1].split(", \"content\": \"");
+    	String[] split_for_end = split_for_content[1].split("\",\"refusal\":");
+    	String pre_processed_response = split_for_end[0];
+    	
+        return pre_processed_response;
     }
     
     /**
