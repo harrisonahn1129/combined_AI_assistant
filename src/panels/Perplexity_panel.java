@@ -68,8 +68,8 @@ public class Perplexity_panel extends JPanel {
     public void displayResponse(String query, String response) {
         // Format and append the query and response
         String formattedText = "\n-------------------\n";
-        formattedText += "Query: " + query + "\n\n";
-        formattedText += "Perplexity: " + response + "\n\n";
+        formattedText += "Query: " + query;
+        formattedText += response + "\n\n";
         
         // Append to the text area
         responseArea.append(formattedText);

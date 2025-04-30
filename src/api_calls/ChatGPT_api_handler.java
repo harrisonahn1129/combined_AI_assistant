@@ -132,11 +132,18 @@ public class ChatGPT_api_handler {
         // This is just a placeholder for demonstration
     	System.out.println(response);
     	String[] split_for_message = response.split("\"message\": ");
-    	String[] split_for_content = split_for_message[1].split(", \"content\": \"");
-    	String[] split_for_end = split_for_content[1].split("\",\"refusal\":");
-    	String pre_processed_response = split_for_end[0];
+    	String[] split_for_col = split_for_message[1].split(": \"");
     	
-        return pre_processed_response;
+    	String processed_response = split_for_col[2];
+    	
+    	if (processed_response.contains("\",\"refusal\"")) {
+    		processed_response = split_for_col[2].replace("\",\"refusal\"", "");
+    	}
+    	if (processed_response.contains(": null,\"annotations\": []},\"logprobs\": null,\"finish_reason\"")) {
+    		processed_response = processed_response.replace(": null,\"annotations\": []},\"logprobs\": null,\"finish_reason\"", "");
+    	}
+    	
+        return processed_response;
     }
     
     /**
