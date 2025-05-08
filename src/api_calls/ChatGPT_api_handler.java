@@ -21,7 +21,7 @@ public class ChatGPT_api_handler {
      * Constructor initializes thread pool for API requests
      */
     public ChatGPT_api_handler() {
-        // Initialize an empty API key - this will be set later through settings
+        // Initialize an empty API key - this will be set later through API settings
         this.apiKey = "";
         // Create a thread pool for managing concurrent API requests
         this.executor = Executors.newFixedThreadPool(2);
@@ -60,7 +60,7 @@ public class ChatGPT_api_handler {
     
     /**
      * Makes a synchronous call to the ChatGPT API with retry mechanism,
-     * while attempts up to 3 retries with exponential backoff
+     * which attempts up to 3 retries with exponential backoff
      * @param prompt: User's input prompt
      * @return API response in string
      * @throws Exception if all retry attempts fail
