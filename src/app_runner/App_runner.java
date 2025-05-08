@@ -8,7 +8,7 @@ import api_calls.*;
 import database.*;
 
 /**
- * Main application class that initializes the Combined AI Assistant
+ * This is the main application class that initializes the Combined AI Assistant
  * This class sets up the main frame, arranges all panels, and starts the application
  */
 public class App_runner {
@@ -20,10 +20,10 @@ public class App_runner {
     private Database_handler dbHandler;
     
     /**
-     * Constructor that initializes all UI components and database connection
+     * Constructor initializes all UI components and database connection
      */
     public App_runner() {
-        // Initialize the database handler for conversation storage
+        // Initialize the database handler
         dbHandler = new Database_handler();
         
         // Initialize the background task handler
@@ -59,7 +59,7 @@ public class App_runner {
         mainFrame.add(splitPane, BorderLayout.CENTER);
         mainFrame.add(inputPanel, BorderLayout.SOUTH);
         
-        // Setup menu
+        // Set up menu
         setupMenu();
         
         // Add shutdown hook to clean up resources
@@ -69,7 +69,7 @@ public class App_runner {
     }
     
     /**
-     * Creates and attaches the application menu
+     * Setting the application menu
      */
     private void setupMenu() {
         JMenuBar menuBar = new JMenuBar();
@@ -137,7 +137,7 @@ public class App_runner {
     }
     
     /**
-     * Shows the API settings dialog
+     * Setting the API settings dialog
      */
     private void showApiSettingsDialog() {
         JDialog settingsDialog = new JDialog(mainFrame, "API Settings", true);
@@ -212,8 +212,6 @@ public class App_runner {
         try {
             // Get references to the API handlers and shut them down
             if (chatGPTPanel != null) {
-                // This assumes you have a method to get the API handler from the panel
-                // If not, consider adding such a method or restructuring
                 chatGPTPanel.getApiHandler().shutdown();
             }
             
@@ -237,7 +235,7 @@ public class App_runner {
         // Force exit after a short delay to ensure all resources are released
         new Thread(() -> {
             try {
-                Thread.sleep(500); // Wait for 0.5 seconds
+                Thread.sleep(500);
                 System.out.println("Forcing exit...");
                 System.exit(0);
             } catch (InterruptedException e) {
@@ -257,7 +255,7 @@ public class App_runner {
     
     /**
      * Application entry point
-     * @param args command line arguments
+     * @param args: Command line arguments
      */
     public static void main(String[] args) {
         // Use the Event Dispatch Thread for Swing applications
