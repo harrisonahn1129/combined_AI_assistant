@@ -10,8 +10,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
- * Handler for making API calls to the OpenAI ChatGPT API
- * Manages API requests, responses, and error handling for ChatGPT interactions
+ * ChatGPT API call hander managing API requests, responses, and error handling
  */
 public class ChatGPT_api_handler {
     private static final String API_ENDPOINT = "https://api.openai.com/v1/chat/completions";
@@ -22,15 +21,14 @@ public class ChatGPT_api_handler {
      * Constructor initializes thread pool for API requests
      */
     public ChatGPT_api_handler() {
-        // Initialize with an empty API key - should be set later through settings
+        // Initialize an empty API key - set through settings
         this.apiKey = "";
         // Create a thread pool for managing concurrent API requests
         this.executor = Executors.newFixedThreadPool(2);
     }
     
     /**
-     * Sets the API key for OpenAI API authentication
-     * @param apiKey The OpenAI API key
+     * Sets the API key for Open AI API authentication
      */
     public void setApiKey(String apiKey) {
         this.apiKey = apiKey;
@@ -38,7 +36,6 @@ public class ChatGPT_api_handler {
     
     /**
      * Checks if the API key has been set
-     * @return true if API key is valid
      */
     public boolean hasValidApiKey() {
         return apiKey != null && !apiKey.isEmpty();
@@ -46,8 +43,6 @@ public class ChatGPT_api_handler {
     
     /**
      * Makes an asynchronous call to the ChatGPT API
-     * @param prompt The user's input query
-     * @return CompletableFuture containing the API response
      */
     public CompletableFuture<String> makeAsyncApiCall(String prompt) {
         return CompletableFuture.supplyAsync(() -> {
@@ -60,16 +55,13 @@ public class ChatGPT_api_handler {
     }
     
     /**
-     * Makes a synchronous call to the ChatGPT API with retry mechanism
-     * Will attempt up to 3 retries with exponential backoff
-     * @param prompt The user's input query
-     * @return The API response as a string
-     * @throws Exception if all retry attempts fail
+     * Makes a synchronous call to the ChatGPT API with retry mechanism,
+     * which attempts up to 3 retries with exponential backoff
      */
     public String makeApiCallWithRetry(String prompt) throws Exception {
         int maxRetries = 3;
         int retryCount = 0;
-        int retryDelayMs = 1000; // Initial delay of 1 second
+        int retryDelayMs = 1000;
         
         while (retryCount < maxRetries) {
             try {
@@ -84,7 +76,7 @@ public class ChatGPT_api_handler {
                 
                 try {
                     Thread.sleep(retryDelayMs);
-                    // Exponential backoff: double the delay for next retry
+                    // Double the delay for next retry as backoff
                     retryDelayMs *= 2;
                 } catch (InterruptedException ie) {
                     Thread.currentThread().interrupt();
@@ -93,15 +85,11 @@ public class ChatGPT_api_handler {
             }
         }
         
-        // This should never be reached due to the exception in the retry loop
         return "Error: Failed to get response after multiple retries";
     }
     
     /**
      * Makes a synchronous call to the ChatGPT API
-     * @param prompt The user's input query
-     * @return The API response as a string
-     * @throws Exception if the API call fails
      */
     public String makeApiCall(String prompt) throws Exception {
         if (!hasValidApiKey()) {
@@ -115,8 +103,8 @@ public class ChatGPT_api_handler {
         connection.setRequestProperty("Content-Type", "application/json");
         connection.setRequestProperty("Authorization", "Bearer " + apiKey);
         connection.setDoOutput(true);
-        connection.setConnectTimeout(10000); // 10 seconds connection timeout
-        connection.setReadTimeout(30000);    // 30 seconds read timeout
+        connection.setConnectTimeout(10000); 
+        connection.setReadTimeout(30000);   
         
         // Add system message to improve response formatting
         String systemPrompt = "Be precise and concise. Do not use LaTeX, markdown formatting, or symbols like [1][2] for references. " +
@@ -165,9 +153,7 @@ public class ChatGPT_api_handler {
     }
     
     /**
-     * Parses the JSON response from the ChatGPT API
-     * @param jsonResponse The raw JSON response from the API
-     * @return The extracted message content
+     * Parses the JSON response from the ChatGPT API to extract the message content
      */
     private String parseJsonResponse(String jsonResponse) {
         try {
@@ -180,7 +166,8 @@ public class ChatGPT_api_handler {
                     if (contentIndex >= 0) {
                         int startQuote = jsonResponse.indexOf("\"", contentIndex + "\"content\"".length());
                         if (startQuote >= 0) {
-                            startQuote++; // Move past the opening quote
+                        	// Move past the opening quote
+                        	startQuote++; 
                             int endQuote = -1;
                             // Find the closing quote (avoiding escaped quotes)
                             boolean foundEndQuote = false;
@@ -219,9 +206,7 @@ public class ChatGPT_api_handler {
     }
     
     /**
-     * Cleans the response text to remove LaTeX, markdown, and special formatting
-     * @param text The text to clean
-     * @return The cleaned text
+     * Clean the response text to remove LaTeX, markdown, and special formatting
      */
     private String cleanResponse(String text) {
         if (text == null) {
@@ -236,7 +221,7 @@ public class ChatGPT_api_handler {
                            .replace("\\\\", "\\")
                            .replace("\\/", "/");
         
-        // Replace LaTeX equations (both inline and block)
+        // Replace LaTeX equations
         result = result.replaceAll("\\$\\$(.*?)\\$\\$", "");
         result = result.replaceAll("\\$(.*?)\\$", "");
         
@@ -253,7 +238,7 @@ public class ChatGPT_api_handler {
         result = result.replaceAll("```[\\s\\S]*?```", "");
         result = result.replaceAll("`(.*?)`", "$1");
         
-        // Remove bullet points (both * and • Unicode character)
+        // Remove bullet points
         result = result.replaceAll("^\\s*[\\*•]\\s+", "");
         
         // Remove numbered lists
