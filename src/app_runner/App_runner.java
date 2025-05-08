@@ -13,8 +13,8 @@ import api_calls.*;
 import database.*;
 
 /**
- * Main application class that initializes the Combined AI Assistant
- * This class sets up the main frame, arranges all panels, and starts the application
+ * App runner that initializes the Combined AI Assistant
+ * Set up the main frame, arranges all panels, and starts the application
  */
 public class App_runner {
     private JFrame mainFrame;
@@ -25,7 +25,7 @@ public class App_runner {
     private Database_handler dbHandler;
     
     /**
-     * Constructor that initializes all UI components and database connection
+     * Initializes all UI components and database connection
      */
     public App_runner() {
         // Initialize the database handler for conversation storage
@@ -58,7 +58,7 @@ public class App_runner {
             new JScrollPane(chatGPTPanel),
             new JScrollPane(perplexityPanel)
         );
-        splitPane.setResizeWeight(0.5); // Equal resizing
+        splitPane.setResizeWeight(0.5);
         
         // Add components to the main frame
         mainFrame.add(splitPane, BorderLayout.CENTER);
@@ -92,7 +92,7 @@ public class App_runner {
         fileMenu.addSeparator();
         fileMenu.add(exitItem);
         
-        // API Settings menu item (now directly in the menu bar)
+        // API Settings menu item
         JMenuItem apiSettingsItem = new JMenuItem("API Settings");
         
         // Add action listeners
@@ -137,7 +137,7 @@ public class App_runner {
         
         // Add menus and items to menu bar
         menuBar.add(fileMenu);
-        menuBar.add(apiSettingsItem); // Add API Settings directly to menu bar
+        menuBar.add(apiSettingsItem);
         
         // Set the menu bar
         mainFrame.setJMenuBar(menuBar);
@@ -254,7 +254,7 @@ public class App_runner {
         DefaultTableModel model = new DefaultTableModel(data, columnNames) {
             @Override
             public boolean isCellEditable(int row, int column) {
-                return column == 2; // Only make the "View Details" column clickable
+                return column == 2;
             }
         };
         
@@ -263,7 +263,7 @@ public class App_runner {
         table.getColumnModel().getColumn(1).setPreferredWidth(450);
         table.getColumnModel().getColumn(2).setPreferredWidth(100);
         
-        // Add button to view conversation - passing historyDialog as parent
+        // Add button to view conversation
         table.getColumn("View Details").setCellRenderer(new ButtonRenderer());
         table.getColumn("View Details").setCellEditor(new ButtonEditor(new JCheckBox(), conversations, this, historyDialog));
         
@@ -287,7 +287,6 @@ public class App_runner {
      * Shows conversation details in a new dialog
      */
     public void showConversationDetails(Map<String, Object> conversation, JDialog parentDialog) {
-        // Use parentDialog (historyDialog) as the parent instead of mainFrame
         JDialog detailsDialog = new JDialog(parentDialog, "Conversation Details", true);
         detailsDialog.setSize(900, 600);
         detailsDialog.setLayout(new BorderLayout(10, 10));
@@ -343,7 +342,7 @@ public class App_runner {
         // Load current conversation button
         JButton loadButton = new JButton("Load to Current Session");
         loadButton.addActionListener(e -> {
-            // Display the conversation in the main panels using the correct instance variables
+            // Display the conversation in the main panels
             this.chatGPTPanel.displayResponse(query, chatGPTResponse);
             this.perplexityPanel.displayResponse(query, perplexityResponse);
             detailsDialog.dispose();
@@ -378,8 +377,6 @@ public class App_runner {
         try {
             // Get references to the API handlers and shut them down
             if (chatGPTPanel != null) {
-                // This assumes you have a method to get the API handler from the panel
-                // If not, consider adding such a method or restructuring
                 chatGPTPanel.getApiHandler().shutdown();
             }
             
@@ -403,7 +400,7 @@ public class App_runner {
         // Force exit after a short delay to ensure all resources are released
         new Thread(() -> {
             try {
-                Thread.sleep(500); // Wait for 0.5 seconds
+                Thread.sleep(500);
                 System.out.println("Forcing exit...");
                 System.exit(0);
             } catch (InterruptedException e) {
@@ -423,7 +420,6 @@ public class App_runner {
     
     /**
      * Application entry point
-     * @param args command line arguments
      */
     public static void main(String[] args) {
         // Use the Event Dispatch Thread for Swing applications
@@ -466,13 +462,13 @@ class ButtonEditor extends DefaultCellEditor {
     private boolean isPushed;
     private List<Map<String, Object>> conversations;
     private App_runner appRunner;
-    private JDialog parentDialog; // Store reference to parent dialog
+    private JDialog parentDialog;
     
     public ButtonEditor(JCheckBox checkBox, List<Map<String, Object>> conversations, App_runner appRunner, JDialog parentDialog) {
         super(checkBox);
         this.conversations = conversations;
         this.appRunner = appRunner;
-        this.parentDialog = parentDialog; // Save the parent dialog reference
+        this.parentDialog = parentDialog;
         button = new JButton();
         button.setOpaque(true);
         button.addActionListener(e -> fireEditingStopped());
