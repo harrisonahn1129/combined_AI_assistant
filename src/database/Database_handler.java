@@ -1,57 +1,72 @@
 package database;
 
-import java.io.FileInputStream;
 import java.io.FileWriter;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CountDownLatch;
 
 /**
- * Database handler for managing conversation data using Firebase
+ * Database handler for managing conversation data using SQLite
  * Handles operations like saving, retrieving, and managing conversation history
  */
 public class Database_handler {
-    // Firebase connection configuration
-    private String firebaseUrl;
+    // SQLite connection configuration
+    private Connection connection;
+    private String dbName = "conversations.db";
     private boolean isConnected;
     
     /**
-     * Constructor initializes Firebase connection
+     * Constructor initializes SQLite connection
      */
     public Database_handler() {
-        // Initialize Firebase connection
-        this.firebaseUrl = "https://your-firebase-project.firebaseio.com";
-        // In real implementation, this would connect to Firebase
-        // NOTE: Add your Firebase project URL and credentials here
-        // Firebase configuration would typically look like:
-        // FirebaseOptions options = new FirebaseOptions.Builder()
-        //     .setCredentials(GoogleCredentials.fromStream(serviceAccount))
-        //     .setDatabaseUrl(firebaseUrl)
-        //     .build();
-        // FirebaseApp.initializeApp(options);
-        
+        // Initialize SQLite connection
         this.isConnected = false;
-        
         try {
-            // Attempt to connect to Firebase if credentials file exists
-            FileInputStream serviceAccount = new FileInputStream("firebase-credentials.json");
-            // In real implementation, we would use:
-            // FirebaseOptions options = new FirebaseOptions.Builder()
-            //     .setCredentials(GoogleCredentials.fromStream(serviceAccount))
-            //     .setDatabaseUrl(firebaseUrl)
-            //     .build();
-            // 
-            // if (FirebaseApp.getApps().isEmpty()) {
-            //     FirebaseApp.initializeApp(options);
-            //     this.isConnected = true;
-            //     System.out.println("Firebase connection established");
-            // }
-            serviceAccount.close();
-        } catch (Exception e) {
-            System.out.println("Firebase connection failed: " + e.getMessage());
-            System.out.println("Using fallback local storage");
+            // Create connection to SQLite database
+            connection = DriverManager.getConnection("jdbc:sqlite:" + dbName);
+            
+            // Create tables if they don't exist
+            createTables();
+            
+            this.isConnected = true;
+            System.out.println("SQLite connection established");
+        } catch (SQLException e) {
+            System.out.println("SQLite connection failed: " + e.getMessage());
+            System.out.println("Using fallback in-memory storage");
+        }
+    }
+    
+    /**
+     * Creates necessary database tables if they don't exist
+     */
+    private void createTables() throws SQLException {
+        // Create conversations table
+        String createConversationsTable = 
+            "CREATE TABLE IF NOT EXISTS conversations (" +
+            "id TEXT PRIMARY KEY, " +
+            "user_query TEXT NOT NULL, " +
+            "chatgpt_response TEXT NOT NULL, " +
+            "perplexity_response TEXT NOT NULL, " +
+            "timestamp INTEGER NOT NULL" +
+            ");";
+            
+        // Create API keys table
+        String createApiKeysTable =
+            "CREATE TABLE IF NOT EXISTS api_keys (" +
+            "service TEXT PRIMARY KEY, " +
+            "api_key TEXT NOT NULL" +
+            ");";
+            
+        try (Statement stmt = connection.createStatement()) {
+            stmt.execute(createConversationsTable);
+            stmt.execute(createApiKeysTable);
         }
     }
     
@@ -66,40 +81,40 @@ public class Database_handler {
     public boolean saveConversation(String conversationId, String userQuery, 
                                     String chatGPTResponse, String perplexityResponse) {
         if (!isConnected) {
-            return saveToLocalStorage(conversationId, userQuery, chatGPTResponse, perplexityResponse);
+            return saveToMemory(conversationId, userQuery, chatGPTResponse, perplexityResponse);
         }
         
-        // In a real implementation, this would save to Firebase
-        // DatabaseReference ref = FirebaseDatabase.getInstance().getReference("conversations");
-        // Map<String, Object> conversation = new HashMap<>();
-        // conversation.put("userQuery", userQuery);
-        // conversation.put("chatGPTResponse", chatGPTResponse);
-        // conversation.put("perplexityResponse", perplexityResponse);
-        // conversation.put("timestamp", ServerValue.TIMESTAMP);
-        // ref.child(conversationId).setValue(conversation);
+        String sql = "INSERT INTO conversations (id, user_query, chatgpt_response, perplexity_response, timestamp) " +
+                     "VALUES (?, ?, ?, ?, ?);";
         
-        System.out.println("Saving conversation to database...");
-        return true;
+        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+            pstmt.setString(1, conversationId);
+            pstmt.setString(2, userQuery);
+            pstmt.setString(3, chatGPTResponse);
+            pstmt.setString(4, perplexityResponse);
+            pstmt.setLong(5, System.currentTimeMillis());
+            
+            pstmt.executeUpdate();
+            System.out.println("Conversation saved to SQLite database: " + conversationId);
+            return true;
+        } catch (SQLException e) {
+            System.out.println("Error saving conversation: " + e.getMessage());
+            return saveToMemory(conversationId, userQuery, chatGPTResponse, perplexityResponse);
+        }
     }
     
     /**
-     * Fallback method to save conversation to local storage
+     * Fallback method to save conversation to memory
      */
-    private boolean saveToLocalStorage(String conversationId, String userQuery, 
-                                      String chatGPTResponse, String perplexityResponse) {
+    private boolean saveToMemory(String conversationId, String userQuery, 
+                                 String chatGPTResponse, String perplexityResponse) {
         try {
-            Map<String, Object> conversation = new HashMap<>();
-            conversation.put("id", conversationId);
-            conversation.put("userQuery", userQuery);
-            conversation.put("chatGPTResponse", chatGPTResponse);
-            conversation.put("perplexityResponse", perplexityResponse);
-            conversation.put("timestamp", System.currentTimeMillis());
-            
-            // In a real implementation, save to a file using JSON
-            System.out.println("Saving conversation to local storage: " + conversationId);
+            // This is a fallback that doesn't actually persist the data
+            // but acknowledges it was received
+            System.out.println("Saving conversation to memory (non-persistent): " + conversationId);
             return true;
         } catch (Exception e) {
-            System.out.println("Error saving to local storage: " + e.getMessage());
+            System.out.println("Error saving to memory: " + e.getMessage());
             return false;
         }
     }
@@ -111,18 +126,46 @@ public class Database_handler {
      */
     public List<Map<String, Object>> getConversationHistory(int limit) {
         if (!isConnected) {
-            return getFromLocalStorage(limit);
+            return getFromMemory(limit);
         }
         
-        // In a real implementation, this would query Firebase
-        // DatabaseReference ref = FirebaseDatabase.getInstance().getReference("conversations");
-        // Query query = ref.orderByChild("timestamp").limitToLast(limit);
-        // query.addListenerForSingleValueEvent(new ValueEventListener() {...});
+        List<Map<String, Object>> result = new ArrayList<>();
+        String sql = "SELECT * FROM conversations ORDER BY timestamp DESC LIMIT ?;";
+        
+        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+            pstmt.setInt(1, limit);
+            
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    Map<String, Object> conversation = new HashMap<>();
+                    conversation.put("id", rs.getString("id"));
+                    conversation.put("userQuery", rs.getString("user_query"));
+                    conversation.put("chatGPTResponse", rs.getString("chatgpt_response"));
+                    conversation.put("perplexityResponse", rs.getString("perplexity_response"));
+                    conversation.put("timestamp", rs.getLong("timestamp"));
+                    result.add(conversation);
+                }
+            }
+            
+            return result;
+        } catch (SQLException e) {
+            System.out.println("Error retrieving conversation history: " + e.getMessage());
+            return getFromMemory(limit);
+        }
+    }
+    
+    /**
+     * Fallback method to retrieve conversations from memory
+     */
+    private List<Map<String, Object>> getFromMemory(int limit) {
+        // In a real implementation without a database, would load from 
+        // some other source. Here we just create dummy data.
+        List<Map<String, Object>> result = new ArrayList<>();
         
         // Dummy implementation for demonstration
-        List<Map<String, Object>> result = new ArrayList<>();
-        for (int i = 0; i < limit; i++) {
+        for (int i = 0; i < Math.min(limit, 3); i++) {
             Map<String, Object> conversation = new HashMap<>();
+            conversation.put("id", "sample-" + i);
             conversation.put("userQuery", "Sample query " + i);
             conversation.put("chatGPTResponse", "ChatGPT response " + i);
             conversation.put("perplexityResponse", "Perplexity response " + i);
@@ -134,34 +177,36 @@ public class Database_handler {
     }
     
     /**
-     * Fallback method to retrieve conversations from local storage
+     * Gets a specific conversation by ID
+     * @param conversationId the ID of the conversation to retrieve
+     * @return the conversation data or null if not found
      */
-    private List<Map<String, Object>> getFromLocalStorage(int limit) {
-        // In a real implementation, would load from the file system and sort by timestamp
-        List<Map<String, Object>> result = new ArrayList<>();
-        
-        // Dummy implementation for demonstration
-        for (int i = 0; i < limit; i++) {
-            Map<String, Object> conversation = new HashMap<>();
-            conversation.put("userQuery", "Sample query " + i);
-            conversation.put("chatGPTResponse", "ChatGPT response " + i);
-            conversation.put("perplexityResponse", "Perplexity response " + i);
-            conversation.put("timestamp", System.currentTimeMillis() - (i * 60000));
-            result.add(conversation);
+    public Map<String, Object> getConversation(String conversationId) {
+        if (!isConnected) {
+            return null;
         }
         
-        return result;
-    }
-    
-    /**
-     * Connects to the Firebase database
-     * @return true if connection successful
-     */
-    private boolean connect() {
-        // In a real implementation, this would establish the connection if not already connected
-        System.out.println("Connecting to Firebase database at: " + firebaseUrl);
-        this.isConnected = true;
-        return true;
+        String sql = "SELECT * FROM conversations WHERE id = ?;";
+        
+        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+            pstmt.setString(1, conversationId);
+            
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    Map<String, Object> conversation = new HashMap<>();
+                    conversation.put("id", rs.getString("id"));
+                    conversation.put("userQuery", rs.getString("user_query"));
+                    conversation.put("chatGPTResponse", rs.getString("chatgpt_response"));
+                    conversation.put("perplexityResponse", rs.getString("perplexity_response"));
+                    conversation.put("timestamp", rs.getLong("timestamp"));
+                    return conversation;
+                }
+            }
+        } catch (SQLException e) {
+            System.out.println("Error retrieving conversation: " + e.getMessage());
+        }
+        
+        return null;
     }
     
     /**
@@ -172,15 +217,23 @@ public class Database_handler {
      */
     public boolean saveApiKey(String service, String apiKey) {
         if (!isConnected) {
-            return saveApiKeyToLocalStorage(service, apiKey);
+            return saveApiKeyToMemory(service, apiKey);
         }
         
-        // In a real implementation, this would securely store the API key
-        // DatabaseReference ref = FirebaseDatabase.getInstance().getReference("api_keys");
-        // ref.child(service).setValue(apiKey);
+        String encryptedKey = encryptApiKey(apiKey);
+        String sql = "INSERT OR REPLACE INTO api_keys (service, api_key) VALUES (?, ?);";
         
-        System.out.println("Saving API key for service: " + service);
-        return true;
+        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+            pstmt.setString(1, service);
+            pstmt.setString(2, encryptedKey);
+            
+            pstmt.executeUpdate();
+            System.out.println("API key saved for service: " + service);
+            return true;
+        } catch (SQLException e) {
+            System.out.println("Error saving API key: " + e.getMessage());
+            return saveApiKeyToMemory(service, apiKey);
+        }
     }
     
     /**
@@ -202,18 +255,18 @@ public class Database_handler {
     }
     
     /**
-     * Fallback method to save API key to local storage
+     * Fallback method to save API key to memory
      */
-    private boolean saveApiKeyToLocalStorage(String service, String apiKey) {
+    private boolean saveApiKeyToMemory(String service, String apiKey) {
         try {
             // Simple encryption for demonstration
             String encryptedKey = encryptApiKey(apiKey);
             
-            // In a real implementation, save to a secure file
-            System.out.println("Saving API key to local storage: " + service);
+            // In a real implementation without a database, would save to some secure storage
+            System.out.println("API key saved to memory: " + service);
             return true;
         } catch (Exception e) {
-            System.out.println("Error saving API key to local storage: " + e.getMessage());
+            System.out.println("Error saving API key to memory: " + e.getMessage());
             return false;
         }
     }
@@ -225,22 +278,32 @@ public class Database_handler {
      */
     public String getApiKey(String service) {
         if (!isConnected) {
-            return getApiKeyFromLocalStorage(service);
+            return getApiKeyFromMemory(service);
         }
         
-        // In a real implementation, this would retrieve the API key
-        // DatabaseReference ref = FirebaseDatabase.getInstance().getReference("api_keys").child(service);
-        // ref.addListenerForSingleValueEvent(new ValueEventListener() {...});
+        String sql = "SELECT api_key FROM api_keys WHERE service = ?;";
         
-        // Return a placeholder value
-        return "api_key_placeholder_for_" + service;
+        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+            pstmt.setString(1, service);
+            
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    String encryptedKey = rs.getString("api_key");
+                    return decryptApiKey(encryptedKey);
+                }
+            }
+        } catch (SQLException e) {
+            System.out.println("Error retrieving API key: " + e.getMessage());
+        }
+        
+        return getApiKeyFromMemory(service);
     }
     
     /**
-     * Fallback method to retrieve API key from local storage
+     * Fallback method to retrieve API key from memory
      */
-    private String getApiKeyFromLocalStorage(String service) {
-        // In a real implementation, would load from secure storage and decrypt
+    private String getApiKeyFromMemory(String service) {
+        // In a real implementation without a database, would load from some secure storage
         return "api_key_placeholder_for_" + service;
     }
     
@@ -248,9 +311,15 @@ public class Database_handler {
      * Closes the database connection
      */
     public void close() {
-        // In a real implementation, this would close the connection
-        this.isConnected = false;
-        System.out.println("Closing database connection");
+        if (connection != null) {
+            try {
+                connection.close();
+                this.isConnected = false;
+                System.out.println("SQLite connection closed");
+            } catch (SQLException e) {
+                System.out.println("Error closing SQLite connection: " + e.getMessage());
+            }
+        }
     }
     
     /**
@@ -262,17 +331,45 @@ public class Database_handler {
         try {
             List<Map<String, Object>> conversations = getConversationHistory(100); // Get up to 100 conversations
             
-            // In a real implementation, use a JSON library to format and write
-            // String json = gson.toJson(conversations);
-            // FileWriter writer = new FileWriter(filePath);
-            // writer.write(json);
-            // writer.close();
+            // Build JSON manually since we don't want additional dependencies
+            StringBuilder json = new StringBuilder("[\n");
+            for (int i = 0; i < conversations.size(); i++) {
+                Map<String, Object> conv = conversations.get(i);
+                json.append("  {\n");
+                json.append("    \"id\": \"").append(conv.get("id")).append("\",\n");
+                json.append("    \"userQuery\": \"").append(escapeJson(conv.get("userQuery").toString())).append("\",\n");
+                json.append("    \"chatGPTResponse\": \"").append(escapeJson(conv.get("chatGPTResponse").toString())).append("\",\n");
+                json.append("    \"perplexityResponse\": \"").append(escapeJson(conv.get("perplexityResponse").toString())).append("\",\n");
+                json.append("    \"timestamp\": ").append(conv.get("timestamp")).append("\n");
+                json.append("  }");
+                if (i < conversations.size() - 1) {
+                    json.append(",");
+                }
+                json.append("\n");
+            }
+            json.append("]");
             
-            System.out.println("Exporting conversations to: " + filePath);
+            // Write to file
+            try (FileWriter writer = new FileWriter(filePath)) {
+                writer.write(json.toString());
+            }
+            
+            System.out.println("Conversations exported to: " + filePath);
             return true;
         } catch (Exception e) {
             System.out.println("Error exporting conversations: " + e.getMessage());
             return false;
         }
+    }
+    
+    /**
+     * Escapes JSON special characters in a string
+     */
+    private String escapeJson(String input) {
+        return input.replace("\\", "\\\\")
+                   .replace("\"", "\\\"")
+                   .replace("\n", "\\n")
+                   .replace("\r", "\\r")
+                   .replace("\t", "\\t");
     }
 } 
