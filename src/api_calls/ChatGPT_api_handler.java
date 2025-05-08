@@ -10,8 +10,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
- * Handler for making API calls to the OpenAI ChatGPT API
- * Manages API requests, responses, and error handling for ChatGPT interactions
+ * ChatGPT API call handler to manage API requests, responses, and error handling
  */
 public class ChatGPT_api_handler {
     private static final String API_ENDPOINT = "https://api.openai.com/v1/chat/completions";
@@ -22,15 +21,15 @@ public class ChatGPT_api_handler {
      * Constructor initializes thread pool for API requests
      */
     public ChatGPT_api_handler() {
-        // Initialize with an empty API key - should be set later through settings
+        // Initialize an empty API key - this will be set later through settings
         this.apiKey = "";
         // Create a thread pool for managing concurrent API requests
         this.executor = Executors.newFixedThreadPool(2);
     }
     
     /**
-     * Sets the API key for OpenAI API authentication
-     * @param apiKey The OpenAI API key
+     * Sets the API key for Open AI API authentication
+     * @param apiKey: OpenAI API key
      */
     public void setApiKey(String apiKey) {
         this.apiKey = apiKey;
@@ -46,7 +45,7 @@ public class ChatGPT_api_handler {
     
     /**
      * Makes an asynchronous call to the ChatGPT API
-     * @param prompt The user's input query
+     * @param prompt: User's input prompt
      * @return CompletableFuture containing the API response
      */
     public CompletableFuture<String> makeAsyncApiCall(String prompt) {
@@ -60,10 +59,10 @@ public class ChatGPT_api_handler {
     }
     
     /**
-     * Makes a synchronous call to the ChatGPT API with retry mechanism
-     * Will attempt up to 3 retries with exponential backoff
-     * @param prompt The user's input query
-     * @return The API response as a string
+     * Makes a synchronous call to the ChatGPT API with retry mechanism,
+     * while attempts up to 3 retries with exponential backoff
+     * @param prompt: User's input prompt
+     * @return API response in string
      * @throws Exception if all retry attempts fail
      */
     public String makeApiCallWithRetry(String prompt) throws Exception {
@@ -99,13 +98,13 @@ public class ChatGPT_api_handler {
     
     /**
      * Makes a synchronous call to the ChatGPT API
-     * @param prompt The user's input query
-     * @return The API response as a string
+     * @param prompt: User's input prompt
+     * @return API response in string
      * @throws Exception if the API call fails
      */
     public String makeApiCall(String prompt) throws Exception {
         if (!hasValidApiKey()) {
-            return "Error: API key not set. Please configure your OpenAI API key in Settings.";
+            return "Error: API key not set. Please configure your OpenAI API key in API Settings.";
         }
         
         // Create connection to the API endpoint
@@ -160,14 +159,14 @@ public class ChatGPT_api_handler {
             }
         }
         
-        // Parse the JSON response to extract the message content
+        // Return the parsed JSON response, which the message content is extract
         return parseJsonResponse(response.toString());
     }
     
     /**
-     * Parses the JSON response from the ChatGPT API
-     * @param jsonResponse The raw JSON response from the API
-     * @return The extracted message content
+     * Parses the JSON response from the ChatGPT API to extract message content
+     * @param jsonResponse: The raw JSON response from the API
+     * @return The extracted message content in string
      */
     private String parseJsonResponse(String jsonResponse) {
         try {
@@ -220,8 +219,8 @@ public class ChatGPT_api_handler {
     
     /**
      * Cleans the response text to remove LaTeX, markdown, and special formatting
-     * @param text The text to clean
-     * @return The cleaned text
+     * @param text: The text to clean
+     * @return The cleaned text in string
      */
     private String cleanResponse(String text) {
         if (text == null) {
