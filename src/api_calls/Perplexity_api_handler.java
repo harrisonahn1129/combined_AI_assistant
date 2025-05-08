@@ -10,8 +10,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
- * Handler for making API calls to the Perplexity AI API
- * Manages API requests, responses, and error handling for Perplexity interactions
+ * Perplexity API call hander managing API requests, responses, and error handling
  */
 public class Perplexity_api_handler {
     private static final String API_ENDPOINT = "https://api.perplexity.ai/chat/completions";
@@ -22,7 +21,7 @@ public class Perplexity_api_handler {
      * Constructor initializes thread pool for API requests
      */
     public Perplexity_api_handler() {
-        // Initialize with an empty API key - should be set later through settings
+        // Initialize an empty API key - set through API settings in menu bar
         this.apiKey = "";
         // Create a thread pool for managing concurrent API requests
         this.executor = Executors.newFixedThreadPool(2);
@@ -30,7 +29,6 @@ public class Perplexity_api_handler {
     
     /**
      * Sets the API key for Perplexity API authentication
-     * @param apiKey The Perplexity API key
      */
     public void setApiKey(String apiKey) {
         this.apiKey = apiKey;
@@ -38,7 +36,6 @@ public class Perplexity_api_handler {
     
     /**
      * Checks if the API key has been set
-     * @return true if API key is valid
      */
     public boolean hasValidApiKey() {
         return apiKey != null && !apiKey.isEmpty();
@@ -46,8 +43,6 @@ public class Perplexity_api_handler {
     
     /**
      * Makes an asynchronous call to the Perplexity API
-     * @param prompt The user's input query
-     * @return CompletableFuture containing the API response
      */
     public CompletableFuture<String> makeAsyncApiCall(String prompt) {
         return CompletableFuture.supplyAsync(() -> {
@@ -60,16 +55,13 @@ public class Perplexity_api_handler {
     }
     
     /**
-     * Makes a synchronous call to the Perplexity API with retry mechanism
-     * Will attempt up to 3 retries with exponential backoff
-     * @param prompt The user's input query
-     * @return The API response as a string
-     * @throws Exception if all retry attempts fail
+     * Makes a synchronous call to the Perplexity API with retry mechanism,
+     * which attempts up to 3 retries with exponential backoff
      */
     public String makeApiCallWithRetry(String prompt) throws Exception {
         int maxRetries = 3;
         int retryCount = 0;
-        int retryDelayMs = 1000; // Initial delay of 1 second
+        int retryDelayMs = 1000; 
         
         while (retryCount < maxRetries) {
             try {
@@ -84,7 +76,7 @@ public class Perplexity_api_handler {
                 
                 try {
                     Thread.sleep(retryDelayMs);
-                    // Exponential backoff: double the delay for next retry
+                    // Double the delay for next retry as backoff
                     retryDelayMs *= 2;
                 } catch (InterruptedException ie) {
                     Thread.currentThread().interrupt();
@@ -93,15 +85,11 @@ public class Perplexity_api_handler {
             }
         }
         
-        // This should never be reached due to the exception in the retry loop
         return "Error: Failed to get response after multiple retries";
     }
     
     /**
      * Makes a synchronous call to the Perplexity API
-     * @param prompt The user's input query
-     * @return The API response as a string
-     * @throws Exception if the API call fails
      */
     public String makeApiCall(String prompt) throws Exception {
         if (!hasValidApiKey()) {
@@ -115,10 +103,9 @@ public class Perplexity_api_handler {
         connection.setRequestProperty("Content-Type", "application/json");
         connection.setRequestProperty("Authorization", "Bearer " + apiKey);
         connection.setDoOutput(true);
-        connection.setConnectTimeout(10000); // 10 seconds connection timeout
-        connection.setReadTimeout(30000);    // 30 seconds read timeout
+        connection.setConnectTimeout(10000);
+        connection.setReadTimeout(30000);  
         
-        // Prepare the request payload
         // Using the format from official Perplexity documentation with improved system prompt
         String systemPrompt = "Be precise and concise. Do not use LaTeX, markdown formatting, or symbols like [1][2] for references. " +
                             "Use plain, conversational language as if speaking directly to a person. " +
@@ -149,7 +136,6 @@ public class Perplexity_api_handler {
                 response.append(responseLine.trim());
             }
         } catch (Exception e) {
-            // If there was an error reading the input stream, try to read the error stream
             try (BufferedReader br = new BufferedReader(
                     new InputStreamReader(connection.getErrorStream(), "utf-8"))) {
                 String responseLine;
@@ -166,15 +152,10 @@ public class Perplexity_api_handler {
     }
     
     /**
-     * Parses the JSON response from the Perplexity API
-     * @param jsonResponse The raw JSON response from the API
-     * @return The extracted message content
+     * Parses the JSON response from the Perplexity API to extract the message content
      */
     private String parseJsonResponse(String jsonResponse) {
-        try {
-            // Debug: Print raw response to console
-            // System.out.println("Raw response: " + jsonResponse);
-            
+        try {            
             // Extract content from choices[0].message.content
             int choicesIndex = jsonResponse.indexOf("\"choices\"");
             if (choicesIndex >= 0) {
@@ -184,7 +165,8 @@ public class Perplexity_api_handler {
                     if (contentIndex >= 0) {
                         int startQuote = jsonResponse.indexOf("\"", contentIndex + "\"content\"".length());
                         if (startQuote >= 0) {
-                            startQuote++; // Move past the opening quote
+                        	// Move past the opening quote
+                        	startQuote++; 
                             int endQuote = -1;
                             // Find the closing quote (avoiding escaped quotes)
                             boolean foundEndQuote = false;
@@ -223,9 +205,7 @@ public class Perplexity_api_handler {
     }
     
     /**
-     * Cleans the response text to remove markdown and special characters
-     * @param text Raw response text
-     * @return Cleaned response text
+     * Clean the response text to remove markdown and special characters
      */
     private String cleanResponse(String text) {
         // Handle escaped characters

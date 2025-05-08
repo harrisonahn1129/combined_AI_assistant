@@ -21,7 +21,7 @@ public class ChatGPT_api_handler {
      * Constructor initializes thread pool for API requests
      */
     public ChatGPT_api_handler() {
-        // Initialize an empty API key - set through settings
+        // Initialize an empty API key - set through API settings in the menu bar
         this.apiKey = "";
         // Create a thread pool for managing concurrent API requests
         this.executor = Executors.newFixedThreadPool(2);
