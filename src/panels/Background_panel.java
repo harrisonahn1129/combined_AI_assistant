@@ -5,8 +5,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Panel for managing background tasks and thread management
- * Provides utilities for running background tasks and cleanup operations
+ * Background panel to manage background tasks and thread management,
+ * providing utilities for running background tasks and cleanup operations
  */
 public class Background_panel {
     private ExecutorService executor;
@@ -22,7 +22,6 @@ public class Background_panel {
     
     /**
      * Executes a task in the background
-     * @param task The runnable task to execute
      */
     public void executeTask(Runnable task) {
         if (isRunning && !executor.isShutdown()) {
@@ -31,8 +30,7 @@ public class Background_panel {
     }
     
     /**
-     * Shuts down all background tasks gracefully
-     * Should be called when the application is closing
+     * Shuts down all background tasks gracefully when application closes
      */
     public void shutdown() {
         if (isRunning && !executor.isShutdown()) {
@@ -58,15 +56,13 @@ public class Background_panel {
     
     /**
      * Checks if background tasks are still running
-     * @return true if the executor is still running
      */
     public boolean isRunning() {
         return isRunning && !executor.isShutdown();
     }
     
     /**
-     * Creates a new executor if the current one is shut down
-     * Useful for restarting background operations after a shutdown
+     * Creates a new executor if the current one is shut down when restarting application
      */
     public void restart() {
         if (!isRunning || executor.isShutdown()) {
