@@ -12,8 +12,8 @@ import api_calls.Perplexity_api_handler;
 import database.Database_handler;
 
 /**
- * Panel for handling user input and query submission
- * Manages the user interface for entering queries and submitting to both AI models
+ * Input panel to handle user input and query submission,
+ * managing the user interface for entering queries and submitting to both AI models
  */
 public class Input_panel extends JPanel {
     private JTextArea inputArea;
@@ -27,9 +27,6 @@ public class Input_panel extends JPanel {
     
     /**
      * Constructor initializes the panel with API handlers and database
-     * @param chatGPTHandler the ChatGPT API handler
-     * @param perplexityHandler the Perplexity API handler
-     * @param dbHandler the database handler
      */
     public Input_panel(ChatGPT_api_handler chatGPTHandler, 
                       Perplexity_api_handler perplexityHandler,
@@ -42,8 +39,6 @@ public class Input_panel extends JPanel {
     
     /**
      * Sets the reference to the ChatGPT and Perplexity panels for updating UI
-     * @param chatGPTPanel the ChatGPT response panel
-     * @param perplexityPanel the Perplexity response panel
      */
     public void setPanels(ChatGPT_panel chatGPTPanel, Perplexity_panel perplexityPanel) {
         this.chatGPTPanel = chatGPTPanel;
@@ -82,7 +77,7 @@ public class Input_panel extends JPanel {
             }
         });
         
-        // Set button to be default button (respond to Enter key)
+        // Set button to be Enter key
         inputArea.getInputMap().put(KeyStroke.getKeyStroke("ENTER"), "submit");
         inputArea.getActionMap().put("submit", new AbstractAction() {
             @Override
@@ -185,7 +180,6 @@ public class Input_panel extends JPanel {
     
     /**
      * Sets the loading state of the UI
-     * @param isLoading true to show loading, false to hide
      */
     private void setLoading(boolean isLoading) {
         submitButton.setEnabled(!isLoading);
