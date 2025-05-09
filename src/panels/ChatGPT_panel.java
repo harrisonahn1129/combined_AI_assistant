@@ -10,20 +10,18 @@ import java.awt.event.MouseWheelListener;
 import api_calls.ChatGPT_api_handler;
 
 /**
- * Panel for displaying ChatGPT responses
- * Displays conversation history with the ChatGPT model
+ * Panel for displaying ChatGPT responses and conversation history of ChatGPT
  */
 public class ChatGPT_panel extends JPanel {
     private ChatGPT_api_handler apiHandler;
     private JTextPane responseArea;
     private JScrollPane scrollPane;
     private JButton clearButton;
-    private int loadingMessagePosition = -1; // Variable to store loading message position
-    private int loadingMessageLength = 0;   // Variable to store loading message length
+    private int loadingMessagePosition = -1; 
+    private int loadingMessageLength = 0;   
     
     /**
      * Constructor initializes the panel with the API handler
-     * @param apiHandler the ChatGPT API handler
      */
     public ChatGPT_panel(ChatGPT_api_handler apiHandler) {
         this.apiHandler = apiHandler;
@@ -66,11 +64,11 @@ public class ChatGPT_panel extends JPanel {
         // Create scroll pane for the response area with improved settings
         scrollPane = new JScrollPane(responseArea);
         scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
-        scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER); // Disable horizontal scrollbar
-        scrollPane.getVerticalScrollBar().setUnitIncrement(16); // Increase scroll speed
+        scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        scrollPane.getVerticalScrollBar().setUnitIncrement(16);
         
-        // Set preferred size based on panel width
-        responseArea.setPreferredSize(new Dimension(0, 0)); // Let parent determine width
+        // Set panel width based on parent's width
+        responseArea.setPreferredSize(new Dimension(0, 0));
         
         // Add resize listener to ensure text wraps correctly when panel is resized
         addComponentListener(new java.awt.event.ComponentAdapter() {
@@ -118,14 +116,12 @@ public class ChatGPT_panel extends JPanel {
     
     /**
      * Displays a response from ChatGPT
-     * @param query The user's query
-     * @param response The ChatGPT response
      */
     public void displayResponse(String query, String response) {
         // Format and append the query and response
         final String formattedText = "--------------------------------------------------\n" +
                                      "Query: " + query + "\n\n" +
-                                     "ChatGPT: " + response + "\n\n";
+                                     response + "\n\n";
         
         // Append to the text pane using document to avoid thread issues
         SwingUtilities.invokeLater(() -> {
@@ -183,7 +179,6 @@ public class ChatGPT_panel extends JPanel {
     
     /**
      * Shows a loading indicator while waiting for an API response
-     * @param isLoading true to show loading, false to hide
      */
     public void setLoading(boolean isLoading) {
         if (isLoading) {
