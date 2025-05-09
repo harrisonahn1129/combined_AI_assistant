@@ -13,8 +13,8 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Database handler for managing conversation data using SQLite
- * Handles operations like saving, retrieving, and managing conversation history
+ * Database handler manages saving and retrieving conversation data using SQLite
+ * and managing conversation history
  */
 public class Database_handler {
     // SQLite connection configuration
@@ -72,11 +72,6 @@ public class Database_handler {
     
     /**
      * Saves a conversation to the database
-     * @param conversationId unique identifier for the conversation
-     * @param userQuery the user's input query
-     * @param chatGPTResponse response from ChatGPT
-     * @param perplexityResponse response from Perplexity
-     * @return true if saved successfully
      */
     public boolean saveConversation(String conversationId, String userQuery, 
                                     String chatGPTResponse, String perplexityResponse) {
@@ -109,8 +104,6 @@ public class Database_handler {
     private boolean saveToMemory(String conversationId, String userQuery, 
                                  String chatGPTResponse, String perplexityResponse) {
         try {
-            // This is a fallback that doesn't actually persist the data
-            // but acknowledges it was received
             System.out.println("Saving conversation to memory (non-persistent): " + conversationId);
             return true;
         } catch (Exception e) {
@@ -121,8 +114,6 @@ public class Database_handler {
     
     /**
      * Retrieves conversation history from the database
-     * @param limit maximum number of conversations to retrieve
-     * @return list of conversation maps
      */
     public List<Map<String, Object>> getConversationHistory(int limit) {
         if (!isConnected) {
@@ -158,11 +149,8 @@ public class Database_handler {
      * Fallback method to retrieve conversations from memory
      */
     private List<Map<String, Object>> getFromMemory(int limit) {
-        // In a real implementation without a database, would load from 
-        // some other source. Here we just create dummy data.
         List<Map<String, Object>> result = new ArrayList<>();
         
-        // Dummy implementation for demonstration
         for (int i = 0; i < Math.min(limit, 3); i++) {
             Map<String, Object> conversation = new HashMap<>();
             conversation.put("id", "sample-" + i);
@@ -178,8 +166,6 @@ public class Database_handler {
     
     /**
      * Gets a specific conversation by ID
-     * @param conversationId the ID of the conversation to retrieve
-     * @return the conversation data or null if not found
      */
     public Map<String, Object> getConversation(String conversationId) {
         if (!isConnected) {
@@ -210,104 +196,6 @@ public class Database_handler {
     }
     
     /**
-     * Securely stores API keys in the database
-     * @param service the service name (e.g., "chatgpt", "perplexity")
-     * @param apiKey the API key to store
-     * @return true if stored successfully
-     */
-    public boolean saveApiKey(String service, String apiKey) {
-        if (!isConnected) {
-            return saveApiKeyToMemory(service, apiKey);
-        }
-        
-        String encryptedKey = encryptApiKey(apiKey);
-        String sql = "INSERT OR REPLACE INTO api_keys (service, api_key) VALUES (?, ?);";
-        
-        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
-            pstmt.setString(1, service);
-            pstmt.setString(2, encryptedKey);
-            
-            pstmt.executeUpdate();
-            System.out.println("API key saved for service: " + service);
-            return true;
-        } catch (SQLException e) {
-            System.out.println("Error saving API key: " + e.getMessage());
-            return saveApiKeyToMemory(service, apiKey);
-        }
-    }
-    
-    /**
-     * Encrypts API key for secure storage (simple implementation)
-     */
-    private String encryptApiKey(String apiKey) {
-        // In a real implementation, use AES or another encryption algorithm
-        // Simple Base64 encoding for demonstration
-        return java.util.Base64.getEncoder().encodeToString(apiKey.getBytes());
-    }
-    
-    /**
-     * Decrypts API key for use
-     */
-    private String decryptApiKey(String encryptedKey) {
-        // In a real implementation, use the corresponding decryption method
-        // Simple Base64 decoding for demonstration
-        return new String(java.util.Base64.getDecoder().decode(encryptedKey));
-    }
-    
-    /**
-     * Fallback method to save API key to memory
-     */
-    private boolean saveApiKeyToMemory(String service, String apiKey) {
-        try {
-            // Simple encryption for demonstration
-            String encryptedKey = encryptApiKey(apiKey);
-            
-            // In a real implementation without a database, would save to some secure storage
-            System.out.println("API key saved to memory: " + service);
-            return true;
-        } catch (Exception e) {
-            System.out.println("Error saving API key to memory: " + e.getMessage());
-            return false;
-        }
-    }
-    
-    /**
-     * Retrieves an API key from the database
-     * @param service the service name (e.g., "chatgpt", "perplexity")
-     * @return the API key or null if not found
-     */
-    public String getApiKey(String service) {
-        if (!isConnected) {
-            return getApiKeyFromMemory(service);
-        }
-        
-        String sql = "SELECT api_key FROM api_keys WHERE service = ?;";
-        
-        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
-            pstmt.setString(1, service);
-            
-            try (ResultSet rs = pstmt.executeQuery()) {
-                if (rs.next()) {
-                    String encryptedKey = rs.getString("api_key");
-                    return decryptApiKey(encryptedKey);
-                }
-            }
-        } catch (SQLException e) {
-            System.out.println("Error retrieving API key: " + e.getMessage());
-        }
-        
-        return getApiKeyFromMemory(service);
-    }
-    
-    /**
-     * Fallback method to retrieve API key from memory
-     */
-    private String getApiKeyFromMemory(String service) {
-        // In a real implementation without a database, would load from some secure storage
-        return "api_key_placeholder_for_" + service;
-    }
-    
-    /**
      * Closes the database connection
      */
     public void close() {
@@ -324,12 +212,11 @@ public class Database_handler {
     
     /**
      * Exports conversations to a JSON file
-     * @param filePath path to save the exported file
-     * @return true if export was successful
      */
     public boolean exportConversations(String filePath) {
         try {
-            List<Map<String, Object>> conversations = getConversationHistory(100); // Get up to 100 conversations
+        	// Get up to 100 conversations
+            List<Map<String, Object>> conversations = getConversationHistory(100); 
             
             // Build JSON manually since we don't want additional dependencies
             StringBuilder json = new StringBuilder("[\n");
